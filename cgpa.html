@@ -313,7 +313,7 @@
                 }
             },
 
-            async init() {
+            init() {
                 this.initTheme();
 
                 // 1. Initial State Population (Year 1 structure)
@@ -326,39 +326,40 @@
                     });
                 });
 
-                // 2. Authentication Flow Fix (Wait for Auth State)
-                const user = await this.authenticateUser();
+                // 2. Authentication Flow Fix (Strictly wait for onAuthStateChanged)
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                 
-                if (!user) {
-                    const redirectUrl = encodeURIComponent(window.location.href);
-                    window.location.href = `https://stack-base.github.io/account/login?redirectUrl=${redirectUrl}`;
-                    return; // Halt execution until redirected
+                if (token) {
+                    signInWithCustomToken(auth, token)
+                        .then(() => this.handleAuthSuccess())
+                        .catch((err) => {
+                            console.error("Custom token login failed", err);
+                            this.handleAuthFailure();
+                        });
+                } else {
+                    // This block halts the UI until Firebase determines the exact session state
+                    const unsubscribe = onAuthStateChanged(auth, (user) => {
+                        unsubscribe(); // Resolve initial state once
+                        if (user) {
+                            this.handleAuthSuccess();
+                        } else {
+                            this.handleAuthFailure();
+                        }
+                    });
                 }
-
-                // 3. Load Data & Remove Loader
-                await this.loadData();
-                document.getElementById('full-screen-loader').classList.add('opacity-0');
-                setTimeout(() => document.getElementById('full-screen-loader').classList.add('hidden'), 300);
             },
 
-            authenticateUser() {
-                return new Promise((resolve) => {
-                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                    
-                    if (token) {
-                        signInWithCustomToken(auth, token)
-                            .then(() => resolve(auth.currentUser))
-                            .catch((err) => {
-                                console.error("Custom token login failed", err);
-                                resolve(null);
-                            });
-                    } else {
-                        const unsubscribe = onAuthStateChanged(auth, (user) => {
-                            unsubscribe(); // Only care about the first emission
-                            resolve(user);
-                        });
-                    }
-                });
+            async handleAuthSuccess() {
+                // 3. Load Data & Remove Loader
+                await this.loadData();
+                const loader = document.getElementById('full-screen-loader');
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.classList.add('hidden'), 300);
+            },
+
+            handleAuthFailure() {
+                // Strictly redirect if user is null (Redirect Loop fix)
+                window.location.href = 'https://stack-base.github.io/account/login?redirectUrl=https://stack-base.github.io/qubit/cgpa';
             },
 
             async loadData() {
