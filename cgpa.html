@@ -234,7 +234,10 @@
                     <div class="text-xl sm:text-2xl font-bold text-slate-700 dark:text-slate-300 leading-none" id="credits-display">0.0</div>
                 </div>
             </div>
-            <div>
+            <div class="flex items-center gap-2">
+                <button onclick="app.saveData()" id="btn-save" class="text-sm font-medium text-white bg-thapar hover:bg-thapar-light transition-colors px-4 py-2 rounded-lg shadow">
+                    Save Data
+                </button>
                 <button onclick="app.resetData()" class="text-sm font-medium text-slate-500 hover:text-red-500 transition-colors px-3 py-2">
                     Reset All
                 </button>
@@ -271,12 +274,20 @@
             { id: 'est', label: 'EST', max: 40 }
         ];
 
-        // Specifically for Electrical (UES013) & Chemistry (UCB009)
-        const SCHEMA_SPEC = [
+        // Specifically for Electrical (UES013)
+        const SCHEMA_ELEC = [
             { id: 'labEval1', label: 'Lab (B.MST)', max: 10 },
             { id: 'mst', label: 'MST', max: 30 },
             { id: 'labEval2', label: 'Pre-EST Lab', max: 10 },
             { id: 'quiz', label: 'Quiz', max: 10 },
+            { id: 'est', label: 'EST', max: 40 }
+        ];
+
+        // Specifically for Chemistry (UCB009)
+        const SCHEMA_CHEM = [
+            { id: 'mst', label: 'MST', max: 30 },
+            { id: 'preEstLab', label: 'Pre-EST Lab', max: 15 },
+            { id: 'quiz', label: 'Quiz', max: 15 },
             { id: 'est', label: 'EST', max: 40 }
         ];
 
@@ -320,7 +331,9 @@
             },
 
             getCourseSchema(code) {
-                return (code === 'UES013' || code === 'UCB009') ? SCHEMA_SPEC : SCHEMA_STD;
+                if (code === 'UES013') return SCHEMA_ELEC;
+                if (code === 'UCB009') return SCHEMA_CHEM;
+                return SCHEMA_STD;
             },
 
             init() {
@@ -376,7 +389,7 @@
             async loadData() {
                 if (!auth.currentUser) return;
                 try {
-                    const docRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'data', 'cgpa');
+                    const docRef = doc(db, 'artifacts', 'qubit', 'users', auth.currentUser.uid, 'data', 'cgpa');
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
                         const savedData = docSnap.data();
@@ -413,11 +426,39 @@
 
             async saveData() {
                 if (!auth.currentUser) return;
+                const saveBtn = document.getElementById('btn-save');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Saving...';
+                    saveBtn.disabled = true;
+                }
                 try {
-                    const docRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'data', 'cgpa');
+                    const docRef = doc(db, 'artifacts', 'qubit', 'users', auth.currentUser.uid, 'data', 'cgpa');
                     await setDoc(docRef, this.state.data);
+                    
+                    if (saveBtn) {
+                        saveBtn.textContent = 'Saved!';
+                        saveBtn.classList.replace('bg-thapar', 'bg-emerald-600');
+                        saveBtn.classList.replace('hover:bg-thapar-light', 'hover:bg-emerald-500');
+                        setTimeout(() => {
+                            saveBtn.textContent = 'Save Data';
+                            saveBtn.classList.replace('bg-emerald-600', 'bg-thapar');
+                            saveBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-thapar-light');
+                            saveBtn.disabled = false;
+                        }, 2000);
+                    }
                 } catch (e) {
                     console.error("Error saving data:", e);
+                    if (saveBtn) {
+                        saveBtn.textContent = 'Error';
+                        saveBtn.classList.replace('bg-thapar', 'bg-red-600');
+                        saveBtn.classList.replace('hover:bg-thapar-light', 'hover:bg-red-500');
+                        setTimeout(() => {
+                            saveBtn.textContent = 'Save Data';
+                            saveBtn.classList.replace('bg-red-600', 'bg-thapar');
+                            saveBtn.classList.replace('hover:bg-red-500', 'hover:bg-thapar-light');
+                            saveBtn.disabled = false;
+                        }, 2000);
+                    }
                 }
             },
 
@@ -602,7 +643,6 @@
                 
                 this.renderYear1Grid();
                 this.handleMarkInput(code, null, null); // recalculate total
-                this.saveData();
             },
 
             handleMarkInput(code, field, value) {
@@ -656,7 +696,6 @@
                 }
                 
                 this.calculateSGPA();
-                this.saveData();
             },
 
             handleManualGrade(code, grade) {
@@ -664,7 +703,6 @@
                     this.state.data.year1[this.state.currentPool][code].grade = grade;
                 }
                 this.calculateSGPA();
-                this.saveData();
             },
 
             // --- Dynamic Years 2-4 Logic ---
@@ -706,7 +744,6 @@
                 const yearData = this.state.data[`year${this.state.currentYear}`];
                 yearData.push({ id: generateId(), name: '', credits: '', grade: '' });
                 this.renderDynamicYear();
-                this.saveData();
             },
 
             updateDynCourse(id, field, value) {
@@ -715,7 +752,6 @@
                 if (course) {
                     course[field] = field === 'credits' ? (parseFloat(value) || '') : value;
                     this.calculateSGPA();
-                    this.saveData();
                 }
             },
 
@@ -723,7 +759,6 @@
                 this.state.data[`year${this.state.currentYear}`] = this.state.data[`year${this.state.currentYear}`].filter(c => c.id !== id);
                 this.renderDynamicYear();
                 this.calculateSGPA();
-                this.saveData();
             },
 
             // --- Calculation & Core ---
@@ -773,7 +808,6 @@
                 }
                 
                 this.calculateSGPA();
-                this.saveData();
             }
         };
 
