@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TIET Year 1 SGPA Calculator</title>
+    <title>TIET CGPA/SGPA Calculator</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -80,7 +80,20 @@
         /* Input Theme */
         .input-theme { color-scheme: light dark; }
 
-        /* Remove arrows from number input */
+        /* Loader Animation */
+        .loader {
+            border: 3px solid rgba(155, 28, 49, 0.2);
+            border-bottom-color: #9b1c31;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -93,19 +106,26 @@
 </head>
 <body class="bg-surface-light text-slate-800 dark:bg-surface-dark dark:text-slate-200 antialiased min-h-screen flex flex-col transition-colors duration-300 pb-28">
 
+    <!-- FULL SCREEN LOADER -->
+    <div id="full-screen-loader" class="fixed inset-0 z-[100] bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="loader w-12 h-12 mb-4"></div>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Authenticating...</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Connecting to StackBase securely.</p>
+    </div>
+
     <!-- Header -->
     <header class="glass sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
         <div class="max-w-6xl mx-auto px-5 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="app.navigate('year-select')">
                 <div class="w-9 h-9 rounded-xl bg-thapar flex items-center justify-center text-white shadow-md shadow-thapar/20">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
                 </div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">TIET SGPA Calc</h1>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">TIET CGPA/SGPA</h1>
             </div>
             
             <div class="flex items-center gap-2">
-                <button id="btn-back" onclick="app.showPoolSelect()" class="hidden text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-thapar dark:hover:text-thapar-light px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                    &larr; Switch Pool
+                <button id="btn-back" onclick="app.navigateBack()" class="hidden text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-thapar dark:hover:text-thapar-light px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    &larr; Back
                 </button>
                 <button onclick="app.toggleTheme()" class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors focus:outline-none" aria-label="Toggle Theme">
                     <svg id="icon-sun" class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -118,11 +138,38 @@
     <!-- Main Content -->
     <main class="flex-grow w-full max-w-6xl mx-auto px-5 py-8 relative">
         
-        <!-- POOL SELECT VIEW -->
-        <div id="view-pool-select" class="view-transition view-active">
+        <!-- YEAR SELECT VIEW -->
+        <div id="view-year-select" class="view-transition view-active">
+            <div class="text-center mb-10 mt-4">
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Select Academic Year</h2>
+                <p class="text-slate-500 dark:text-slate-400">Choose your current year to calculate your SGPA.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div onclick="app.selectYear(1)" class="bg-card-light dark:bg-card-dark border-2 border-slate-200 dark:border-slate-700 hover:border-thapar/50 dark:hover:border-thapar/50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer text-center group">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Year 1</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Detailed Marks Entry (Pre-MST, MST, Pre-EST, EST)</p>
+                </div>
+                <div onclick="app.selectYear(2)" class="bg-card-light dark:bg-card-dark border-2 border-slate-200 dark:border-slate-700 hover:border-thapar/50 dark:hover:border-thapar/50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer text-center group">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Year 2</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Dynamic Course Entry</p>
+                </div>
+                <div onclick="app.selectYear(3)" class="bg-card-light dark:bg-card-dark border-2 border-slate-200 dark:border-slate-700 hover:border-thapar/50 dark:hover:border-thapar/50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer text-center group">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Year 3</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Dynamic Course Entry</p>
+                </div>
+                <div onclick="app.selectYear(4)" class="bg-card-light dark:bg-card-dark border-2 border-slate-200 dark:border-slate-700 hover:border-thapar/50 dark:hover:border-thapar/50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer text-center group">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Year 4</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Dynamic Course Entry</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- POOL SELECT VIEW (YEAR 1 ONLY) -->
+        <div id="view-pool-select" class="view-transition view-hidden">
             <div class="text-center mb-10 mt-4">
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">Year 1 Calculator</h2>
-                <p class="text-slate-500 dark:text-slate-400">Select your allocated freshman pool to begin calculating your SGPA.</p>
+                <p class="text-slate-500 dark:text-slate-400">Select your allocated freshman pool.</p>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
@@ -148,13 +195,14 @@
         <div id="view-calculator" class="view-transition view-hidden">
             <div class="flex flex-col mb-6 gap-2">
                 <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                    Marks Entry
-                    <span id="current-pool-badge" class="text-[10px] font-bold px-2 py-1 bg-thapar/10 text-thapar border border-thapar/20 rounded-md uppercase tracking-wide">Pool ?</span>
+                    Marks Entry 
+                    <span id="current-year-badge" class="text-[10px] font-bold px-2 py-1 bg-thapar/10 text-thapar border border-thapar/20 rounded-md uppercase tracking-wide"></span>
                 </h2>
-                <p class="text-sm text-slate-500">Input your marks below. Sessionals and bounds are enforced automatically. Grades can be overridden manually if needed.</p>
+                <p class="text-sm text-slate-500" id="calc-instructions">Input your marks below. Sessionals and bounds are enforced automatically.</p>
             </div>
             
-            <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 overflow-hidden">
+            <!-- Year 1 Container -->
+            <div id="year1-container" class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 overflow-hidden hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse whitespace-nowrap min-w-[850px]">
                         <thead>
@@ -169,11 +217,22 @@
                                 <th class="p-4 text-center w-24">Action<br><span class="text-[9px] font-normal lowercase">(Sessionals)</span></th>
                             </tr>
                         </thead>
-                        <tbody id="table-body" class="divide-y divide-slate-100 dark:divide-slate-800/50">
+                        <tbody id="year1-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/50">
                             <!-- Rows Injected by JS -->
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Dynamic Year Container (Years 2-4) -->
+            <div id="dynamic-year-container" class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 overflow-hidden hidden p-4 sm:p-6">
+                <div id="dynamic-courses-list" class="space-y-4 mb-6">
+                    <!-- Dynamic Courses Injected Here -->
+                </div>
+                <button onclick="app.addDynamicCourse()" class="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:text-thapar hover:border-thapar dark:hover:text-thapar-light dark:hover:border-thapar-light transition-colors font-medium flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    Add Course
+                </button>
             </div>
         </div>
     </main>
@@ -202,17 +261,11 @@
     <!-- Application Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Placeholder config as requested. If your platform injects __firebase_config, it will use that.
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "dummy", authDomain: "dummy.firebaseapp.com", projectId: "dummy", storageBucket: "dummy.appspot.com"
         };
 
         const firebaseApp = initializeApp(firebaseConfig);
@@ -220,51 +273,20 @@
         const db = getFirestore(firebaseApp);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tiet-cgpa-calculator';
 
-        /**
-         * =========================================================================
-         * DATA CONFIGURATION SOURCE
-         * Course data, credits, standard bounds, and cutoffs.
-         * =========================================================================
-         */
         const TIET_DATA = {
-            gradePoints: {
-                'A+': 10, 'A': 10, 'A-': 9, 'B': 8, 'B-': 7, 'C': 6, 'C-': 5, 'E': 2, 'F': 0
-            },
-            maxMarks: {
-                preMst: 15,
-                mst: 30,
-                preEst: 15,
-                est: 40
-            },
-            // Fallback cutoffs for courses without explicitly provided cutoffs
+            gradePoints: { 'A+': 10, 'A': 10, 'A-': 9, 'B': 8, 'B-': 7, 'C': 6, 'C-': 5, 'E': 2, 'F': 0 },
+            maxMarks: { preMst: 15, mst: 30, preEst: 15, est: 40 },
             standardCutoffs: [
                 {grade: 'A', min: 90}, {grade: 'A-', min: 80}, {grade: 'B', min: 70}, 
                 {grade: 'B-', min: 60}, {grade: 'C', min: 50}, {grade: 'C-', min: 40}
             ],
             poolA: [
-                { 
-                    code: 'UES103', name: 'Programming for Problem Solving', credits: 4, 
-                    cutoffs: [ {grade: 'A', min: 79}, {grade: 'A-', min: 69.5}, {grade: 'B', min: 58.5}, {grade: 'B-', min: 42.5}, {grade: 'C', min: 30}, {grade: 'C-', min: 20} ] 
-                },
-                { 
-                    code: 'UES013', name: 'Electrical & Electronics Engineering', credits: 4.5, 
-                    cutoffs: [ {grade: 'A', min: 64.5}, {grade: 'A-', min: 59.13}, {grade: 'B', min: 51.5}, {grade: 'B-', min: 45.38}, {grade: 'C', min: 35}, {grade: 'C-', min: 25} ] 
-                },
-                { 
-                    code: 'UMA022', name: 'Calculus for Engineers', credits: 3.5, 
-                    cutoffs: [ {grade: 'A', min: 90}, {grade: 'A-', min: 81}, {grade: 'B', min: 62}, {grade: 'B-', min: 46}, {grade: 'C', min: 30}, {grade: 'C-', min: 20} ] 
-                },
-                { 
-                    code: 'UEN008', name: 'Energy and Environment', credits: 2, 
-                    cutoffs: [ {grade: 'A', min: 77.84}, {grade: 'A-', min: 69}, {grade: 'B', min: 60}, {grade: 'B-', min: 42.83}, {grade: 'C', min: 30}, {grade: 'C-', min: 20} ] 
-                },
-                { 
-                    code: 'UCB009', name: 'Chemistry', credits: 4, 
-                    cutoffs: [ {grade: 'A', min: 83.92}, {grade: 'A-', min: 79.96}, {grade: 'B', min: 60.04}, {grade: 'B-', min: 46.08}, {grade: 'C', min: 35}, {grade: 'C-', min: 25} ] 
-                },
-                { 
-                    code: 'UTA032', name: 'Boot Camp', credits: 1, isBootcamp: true 
-                }
+                { code: 'UES103', name: 'Programming for Problem Solving', credits: 4, cutoffs: [ {grade: 'A', min: 79}, {grade: 'A-', min: 69.5}, {grade: 'B', min: 58.5}, {grade: 'B-', min: 42.5}, {grade: 'C', min: 30}, {grade: 'C-', min: 20} ] },
+                { code: 'UES013', name: 'Electrical & Electronics Engineering', credits: 4.5, cutoffs: [ {grade: 'A', min: 64.5}, {grade: 'A-', min: 59.13}, {grade: 'B', min: 51.5}, {grade: 'B-', min: 45.38}, {grade: 'C', min: 35}, {grade: 'C-', min: 25} ] },
+                { code: 'UMA022', name: 'Calculus for Engineers', credits: 3.5, cutoffs: [ {grade: 'A', min: 90}, {grade: 'A-', min: 81}, {grade: 'B', min: 62}, {grade: 'B-', min: 46}, {grade: 'C', min: 30}, {grade: 'C-', min: 20} ] },
+                { code: 'UEN008', name: 'Energy and Environment', credits: 2, cutoffs: [ {grade: 'A', min: 77.84}, {grade: 'A-', min: 69}, {grade: 'B', min: 60}, {grade: 'B-', min: 42.83}, {grade: 'C', min: 30}, {grade: 'C-', min: 20} ] },
+                { code: 'UCB009', name: 'Chemistry', credits: 4, cutoffs: [ {grade: 'A', min: 83.92}, {grade: 'A-', min: 79.96}, {grade: 'B', min: 60.04}, {grade: 'B-', min: 46.08}, {grade: 'C', min: 35}, {grade: 'C-', min: 25} ] },
+                { code: 'UTA032', name: 'Boot Camp', credits: 1, isBootcamp: true }
             ],
             poolB: [
                 { code: 'UHU003', name: 'Professional Communication', credits: 3 },
@@ -276,73 +298,93 @@
             ]
         };
 
-        /**
-         * =========================================================================
-         * APPLICATION CONTROLLER
-         * =========================================================================
-         */
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
         const app = {
             state: {
-                activeView: 'pool-select',
+                activeView: 'year-select',
+                currentYear: null,
                 currentPool: null,
-                data: { 'A': {}, 'B': {} }
+                data: {
+                    year1: { 'A': {}, 'B': {} },
+                    year2: [],
+                    year3: [],
+                    year4: []
+                }
             },
 
             async init() {
                 this.initTheme();
 
-                // Authentication Check
-                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                let authenticated = false;
-                
-                if (token) {
-                    try {
-                        await signInWithCustomToken(auth, token);
-                        authenticated = !!auth.currentUser;
-                    } catch (e) {
-                        console.error("Authentication failed:", e);
-                    }
-                }
-                
-                if (!authenticated) {
-                    // Redirect unauthenticated users
-                    window.location.href = 'https://stack-base.github.io/account/login?redirectUrl=https://stack-base.github.io/qubit/cgpa';
-                    return;
-                }
-
-                // Pre-populate data structures
+                // 1. Initial State Population (Year 1 structure)
                 ['A', 'B'].forEach(pool => {
                     TIET_DATA[`pool${pool}`].forEach(sub => {
-                        this.state.data[pool][sub.code] = {
+                        this.state.data.year1[pool][sub.code] = {
                             marks: { preMst: '', mst: '', preEst: '', est: '' },
-                            hasSessionals: true,
-                            total: 0,
-                            grade: ''
+                            hasSessionals: true, total: 0, grade: ''
                         };
                     });
                 });
+
+                // 2. Authentication Flow Fix (Wait for Auth State)
+                const user = await this.authenticateUser();
                 
-                // Fetch existing data from Firestore
+                if (!user) {
+                    const redirectUrl = encodeURIComponent(window.location.href);
+                    window.location.href = `https://stack-base.github.io/account/login?redirectUrl=${redirectUrl}`;
+                    return; // Halt execution until redirected
+                }
+
+                // 3. Load Data & Remove Loader
                 await this.loadData();
+                document.getElementById('full-screen-loader').classList.add('opacity-0');
+                setTimeout(() => document.getElementById('full-screen-loader').classList.add('hidden'), 300);
+            },
+
+            authenticateUser() {
+                return new Promise((resolve) => {
+                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    
+                    if (token) {
+                        signInWithCustomToken(auth, token)
+                            .then(() => resolve(auth.currentUser))
+                            .catch((err) => {
+                                console.error("Custom token login failed", err);
+                                resolve(null);
+                            });
+                    } else {
+                        const unsubscribe = onAuthStateChanged(auth, (user) => {
+                            unsubscribe(); // Only care about the first emission
+                            resolve(user);
+                        });
+                    }
+                });
             },
 
             async loadData() {
                 if (!auth.currentUser) return;
                 try {
-                    const docRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'marks', 'userData');
+                    const docRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'data', 'cgpa');
                     const docSnap = await getDoc(docRef);
-                    
                     if (docSnap.exists()) {
                         const savedData = docSnap.data();
-                        // Deep merge to avoid losing new schema properties if updated
-                        ['A', 'B'].forEach(pool => {
-                            if (savedData[pool]) {
-                                Object.keys(savedData[pool]).forEach(code => {
-                                    if (this.state.data[pool][code]) {
-                                        this.state.data[pool][code] = savedData[pool][code];
-                                    }
-                                });
-                            }
+                        
+                        // Merge Year 1 Data
+                        if (savedData.year1) {
+                            ['A', 'B'].forEach(pool => {
+                                if (savedData.year1[pool]) {
+                                    Object.keys(savedData.year1[pool]).forEach(code => {
+                                        if (this.state.data.year1[pool][code]) {
+                                            this.state.data.year1[pool][code] = savedData.year1[pool][code];
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        
+                        // Merge Dynamic Years Data
+                        ['year2', 'year3', 'year4'].forEach(year => {
+                            if (savedData[year]) this.state.data[year] = savedData[year];
                         });
                     }
                 } catch (e) {
@@ -353,14 +395,13 @@
             async saveData() {
                 if (!auth.currentUser) return;
                 try {
-                    const docRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'marks', 'userData');
+                    const docRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'data', 'cgpa');
                     await setDoc(docRef, this.state.data);
                 } catch (e) {
                     console.error("Error saving data:", e);
                 }
             },
 
-            // --- Theme Management ---
             initTheme() {
                 if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('dark');
@@ -380,145 +421,92 @@
                 }
             },
 
-            // --- Navigation Logic ---
             navigate(viewId) {
-                const currentEl = document.getElementById(`view-${this.state.activeView}`);
-                if(currentEl) {
-                    currentEl.classList.remove('view-active');
-                    currentEl.classList.add('view-hidden');
-                }
-
+                document.getElementById(`view-${this.state.activeView}`).classList.remove('view-active');
+                document.getElementById(`view-${this.state.activeView}`).classList.add('view-hidden');
+                
                 this.state.activeView = viewId;
                 
                 const backBtn = document.getElementById('btn-back');
-                viewId === 'pool-select' ? backBtn.classList.add('hidden') : backBtn.classList.remove('hidden');
+                viewId === 'year-select' ? backBtn.classList.add('hidden') : backBtn.classList.remove('hidden');
                 
                 const footer = document.getElementById('sticky-footer');
-                viewId === 'calculator' 
-                    ? footer.classList.remove('translate-y-full') 
-                    : footer.classList.add('translate-y-full');
+                viewId === 'calculator' ? footer.classList.remove('translate-y-full') : footer.classList.add('translate-y-full');
 
                 setTimeout(() => {
-                    const targetEl = document.getElementById(`view-${viewId}`);
-                    if(targetEl){
-                        targetEl.classList.remove('view-hidden');
-                        targetEl.classList.add('view-active');
-                    }
+                    document.getElementById(`view-${viewId}`).classList.remove('view-hidden');
+                    document.getElementById(`view-${viewId}`).classList.add('view-active');
                     if (viewId === 'calculator') this.calculateSGPA();
                 }, 100);
             },
 
-            showPoolSelect() {
-                this.navigate('pool-select');
+            navigateBack() {
+                if (this.state.activeView === 'pool-select' || this.state.activeView === 'calculator' && this.state.currentYear !== 1) {
+                    this.navigate('year-select');
+                } else if (this.state.activeView === 'calculator' && this.state.currentYear === 1) {
+                    this.navigate('pool-select');
+                }
+            },
+
+            selectYear(year) {
+                this.state.currentYear = year;
+                if (year === 1) {
+                    this.navigate('pool-select');
+                } else {
+                    document.getElementById('current-year-badge').textContent = `Year ${year}`;
+                    document.getElementById('calc-instructions').textContent = "Add your courses and credits dynamically below.";
+                    document.getElementById('year1-container').classList.add('hidden');
+                    document.getElementById('dynamic-year-container').classList.remove('hidden');
+                    this.renderDynamicYear();
+                    this.navigate('calculator');
+                }
             },
 
             selectPool(pool) {
                 this.state.currentPool = pool;
-                document.getElementById('current-pool-badge').textContent = `Pool ${pool}`;
-                this.renderTable();
+                document.getElementById('current-year-badge').textContent = `Year 1 (Pool ${pool})`;
+                document.getElementById('calc-instructions').textContent = "Input your marks below. Sessionals and bounds are enforced automatically.";
+                document.getElementById('year1-container').classList.remove('hidden');
+                document.getElementById('dynamic-year-container').classList.add('hidden');
+                this.renderYear1Table();
                 this.navigate('calculator');
             },
 
-            // --- Core Logic & Rendering ---
-            renderTable() {
+            // --- Year 1 Logic ---
+            renderYear1Table() {
                 const pool = this.state.currentPool;
                 const subjects = TIET_DATA[`pool${pool}`];
-                const tbody = document.getElementById('table-body');
+                const tbody = document.getElementById('year1-table-body');
                 tbody.innerHTML = '';
 
-                const gradeOptions = Object.keys(TIET_DATA.gradePoints)
-                    .map(g => `<option value="${g}">${g}</option>`).join('');
+                const gradeOptions = Object.keys(TIET_DATA.gradePoints).map(g => `<option value="${g}">${g}</option>`).join('');
 
                 subjects.forEach(sub => {
-                    const data = this.state.data[pool][sub.code];
-                    const sessionalDisabled = !data.hasSessionals;
-                    
-                    const inputClass = "w-full max-w-[65px] mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm text-center rounded focus:ring-1 focus:ring-thapar focus:border-thapar block p-1.5 outline-none transition-all input-theme disabled:opacity-30 disabled:bg-slate-100 disabled:cursor-not-allowed";
+                    const data = this.state.data.year1[pool][sub.code];
+                    const sDisabled = !data.hasSessionals;
+                    const iClass = "w-full max-w-[65px] mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm text-center rounded focus:ring-1 focus:ring-thapar focus:border-thapar block p-1.5 outline-none transition-all input-theme disabled:opacity-30 disabled:bg-slate-100 disabled:cursor-not-allowed";
 
-                    // Handle Boot Camp separately (usually doesn't have standard marks, just grade)
                     if (sub.isBootcamp) {
                         tbody.innerHTML += `
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group">
-                            <td class="p-4">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span>
-                                </div>
-                                <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">${sub.name}</div>
-                            </td>
-                            <td class="p-4 text-center" colspan="5">
-                                <span class="text-xs text-slate-400 italic">Direct Grade Entry</span>
-                            </td>
-                            <td class="p-4 text-center">
-                                <select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)"
-                                    class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar focus:border-thapar block p-1.5 outline-none appearance-none input-theme">
-                                    <option value="">Select</option>
-                                    ${gradeOptions}
-                                </select>
-                            </td>
-                            <td class="p-4 text-center">
-                                <!-- No actions for bootcamp -->
-                            </td>
+                            <td class="p-4"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span></div><div class="text-sm font-semibold text-slate-900 dark:text-slate-100">${sub.name}</div></td>
+                            <td class="p-4 text-center" colspan="5"><span class="text-xs text-slate-400 italic">Direct Grade Entry</span></td>
+                            <td class="p-4 text-center"><select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-1.5 outline-none appearance-none input-theme"><option value="">Select</option>${gradeOptions}</select></td>
+                            <td class="p-4 text-center"></td>
                         </tr>`;
                     } else {
-                        // Standard row
                         tbody.innerHTML += `
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group">
-                            <td class="p-4">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span>
-                                </div>
-                                <div class="text-sm font-semibold text-slate-900 dark:text-slate-100 whitespace-normal line-clamp-2">${sub.name}</div>
-                            </td>
-                            <td class="p-4 text-center">
-                                <input type="number" min="0" max="15" step="0.5" id="mark-${sub.code}-preMst" 
-                                    value="${data.marks.preMst}" 
-                                    oninput="app.handleMarkInput('${sub.code}', 'preMst', this.value)"
-                                    ${sessionalDisabled ? 'disabled' : ''} 
-                                    class="${inputClass}">
-                            </td>
-                            <td class="p-4 text-center">
-                                <input type="number" min="0" max="30" step="0.5" id="mark-${sub.code}-mst" 
-                                    value="${data.marks.mst}" 
-                                    oninput="app.handleMarkInput('${sub.code}', 'mst', this.value)"
-                                    class="${inputClass}">
-                            </td>
-                            <td class="p-4 text-center">
-                                <input type="number" min="0" max="15" step="0.5" id="mark-${sub.code}-preEst" 
-                                    value="${data.marks.preEst}" 
-                                    oninput="app.handleMarkInput('${sub.code}', 'preEst', this.value)"
-                                    ${sessionalDisabled ? 'disabled' : ''} 
-                                    class="${inputClass}">
-                            </td>
-                            <td class="p-4 text-center">
-                                <input type="number" min="0" max="40" step="0.5" id="mark-${sub.code}-est" 
-                                    value="${data.marks.est}" 
-                                    oninput="app.handleMarkInput('${sub.code}', 'est', this.value)"
-                                    class="${inputClass}">
-                            </td>
-                            <td class="p-4 text-center">
-                                <div id="total-${sub.code}" class="text-sm font-bold text-thapar dark:text-thapar-light">${data.total || '0'}</div>
-                            </td>
-                            <td class="p-4 text-center">
-                                <select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)"
-                                    class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar focus:border-thapar block p-1.5 outline-none appearance-none input-theme">
-                                    <option value="">Select</option>
-                                    ${gradeOptions}
-                                </select>
-                            </td>
-                            <td class="p-4 text-center">
-                                <button onclick="app.toggleSessionals('${sub.code}')" 
-                                    class="text-xs font-semibold px-2 py-1 rounded transition-colors ${sessionalDisabled ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'}" 
-                                    title="Toggle Sessionals On/Off">
-                                    ${sessionalDisabled ? 'Enable Sess.' : 'Disable Sess.'}
-                                </button>
-                            </td>
-                        </tr>
-                        `;
+                            <td class="p-4"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span></div><div class="text-sm font-semibold text-slate-900 dark:text-slate-100 whitespace-normal line-clamp-2">${sub.name}</div></td>
+                            <td class="p-4 text-center"><input type="number" min="0" max="15" step="0.5" id="mark-${sub.code}-preMst" value="${data.marks.preMst}" oninput="app.handleMarkInput('${sub.code}', 'preMst', this.value)" ${sDisabled ? 'disabled' : ''} class="${iClass}"></td>
+                            <td class="p-4 text-center"><input type="number" min="0" max="30" step="0.5" id="mark-${sub.code}-mst" value="${data.marks.mst}" oninput="app.handleMarkInput('${sub.code}', 'mst', this.value)" class="${iClass}"></td>
+                            <td class="p-4 text-center"><input type="number" min="0" max="15" step="0.5" id="mark-${sub.code}-preEst" value="${data.marks.preEst}" oninput="app.handleMarkInput('${sub.code}', 'preEst', this.value)" ${sDisabled ? 'disabled' : ''} class="${iClass}"></td>
+                            <td class="p-4 text-center"><input type="number" min="0" max="40" step="0.5" id="mark-${sub.code}-est" value="${data.marks.est}" oninput="app.handleMarkInput('${sub.code}', 'est', this.value)" class="${iClass}"></td>
+                            <td class="p-4 text-center"><div id="total-${sub.code}" class="text-sm font-bold text-thapar dark:text-thapar-light">${data.total || '0'}</div></td>
+                            <td class="p-4 text-center"><select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-1.5 outline-none appearance-none input-theme"><option value="">Select</option>${gradeOptions}</select></td>
+                            <td class="p-4 text-center"><button onclick="app.toggleSessionals('${sub.code}')" class="text-[10px] font-semibold px-2 py-1 rounded transition-colors ${sDisabled ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'}">${sDisabled ? 'Enable Sess.' : 'Disable Sess.'}</button></td>
+                        </tr>`;
                     }
-
-                    // Sync the grade select value post-render to ensure state matching
                     setTimeout(() => {
                         const sel = document.getElementById(`grade-sel-${sub.code}`);
                         if(sel && data.grade) sel.value = data.grade;
@@ -528,120 +516,157 @@
 
             toggleSessionals(code) {
                 const pool = this.state.currentPool;
-                const data = this.state.data[pool][code];
-                
+                const data = this.state.data.year1[pool][code];
                 data.hasSessionals = !data.hasSessionals;
-                
-                // If sessionals are turned off, zero them out and disable fields
                 if (!data.hasSessionals) {
-                    data.marks.preMst = '';
-                    data.marks.preEst = '';
+                    data.marks.preMst = ''; data.marks.preEst = '';
                 }
-                
-                // Re-render table to visually update disabled states and buttons
-                this.renderTable();
-                
-                // Recalculate totals and bounds manually since input event won't fire
-                this.handleMarkInput(code, null, null);
-                
+                this.renderYear1Table();
+                this.handleMarkInput(code, null, null); // recalculate
                 this.saveData();
             },
 
             handleMarkInput(code, field, value) {
                 const pool = this.state.currentPool;
-                const data = this.state.data[pool][code];
+                const data = this.state.data.year1[pool][code];
                 
                 if (field !== null) {
-                    // bounds checking
                     let numericVal = parseFloat(value);
                     const maxAllowed = TIET_DATA.maxMarks[field];
-                    
                     if (!isNaN(numericVal)) {
                         if (numericVal < 0) numericVal = 0;
                         if (numericVal > maxAllowed) numericVal = maxAllowed;
-                        
                         data.marks[field] = numericVal;
                         
-                        // Update visual input box if clamped
                         const inputEl = document.getElementById(`mark-${code}-${field}`);
-                        if (inputEl && parseFloat(inputEl.value) !== numericVal) {
-                            inputEl.value = numericVal;
-                        }
+                        if (inputEl && parseFloat(inputEl.value) !== numericVal) inputEl.value = numericVal;
                     } else {
                         data.marks[field] = '';
                     }
                 }
 
-                // 1. Calculate Total
                 let total = 0;
                 ['preMst', 'mst', 'preEst', 'est'].forEach(f => {
                     const v = parseFloat(data.marks[f]);
                     if (!isNaN(v)) total += v;
                 });
-                
                 data.total = parseFloat(total.toFixed(2));
                 
-                // Update DOM directly for smooth typing
                 const totalEl = document.getElementById(`total-${code}`);
                 if (totalEl) totalEl.textContent = data.total > 0 ? data.total : '0';
 
-                // 2. Auto-Determine Grade
                 const sub = TIET_DATA[`pool${pool}`].find(s => s.code === code);
                 const cutoffsToUse = sub.cutoffs || TIET_DATA.standardCutoffs;
 
                 if (data.total > 0) {
-                    let autoGrade = '';
+                    let autoGrade = 'F';
                     for (let c of cutoffsToUse) {
-                        if (data.total >= c.min) {
-                            autoGrade = c.grade;
-                            break;
-                        }
+                        if (data.total >= c.min) { autoGrade = c.grade; break; }
                     }
-                    
-                    // If marks are present but very low, fallback to F or lowest handled (assuming F if below all cutoffs)
-                    if (autoGrade === '') {
-                         autoGrade = 'F'; 
-                    }
-                    
                     data.grade = autoGrade;
-                    
-                    // Update DOM dropdown directly
                     const sel = document.getElementById(`grade-sel-${code}`);
-                    if (sel && autoGrade) sel.value = autoGrade;
+                    if (sel) sel.value = autoGrade;
                 } else {
                     data.grade = '';
                     const sel = document.getElementById(`grade-sel-${code}`);
                     if (sel) sel.value = '';
                 }
-
-                // 3. Trigger Global SGPA update
-                this.calculateSGPA();
                 
-                // 4. Save to Firebase
+                this.calculateSGPA();
                 this.saveData();
             },
 
             handleManualGrade(code, grade) {
-                this.state.data[this.state.currentPool][code].grade = grade;
+                if (this.state.currentYear === 1) {
+                    this.state.data.year1[this.state.currentPool][code].grade = grade;
+                }
                 this.calculateSGPA();
                 this.saveData();
             },
 
-            calculateSGPA() {
-                if (!this.state.currentPool) return;
+            // --- Dynamic Years 2-4 Logic ---
+            renderDynamicYear() {
+                const yearData = this.state.data[`year${this.state.currentYear}`];
+                const listEl = document.getElementById('dynamic-courses-list');
+                listEl.innerHTML = '';
                 
-                const pool = this.state.currentPool;
-                const subjects = TIET_DATA[`pool${pool}`];
+                const gradeOptions = Object.keys(TIET_DATA.gradePoints).map(g => `<option value="${g}">${g}</option>`).join('');
+
+                yearData.forEach((course) => {
+                    const id = course.id;
+                    const row = document.createElement('div');
+                    row.className = 'grid grid-cols-12 gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50';
+                    row.innerHTML = `
+                        <div class="col-span-12 sm:col-span-5">
+                            <input type="text" placeholder="Course Name (e.g. OS)" value="${course.name}" onchange="app.updateDynCourse('${id}', 'name', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-2 outline-none input-theme">
+                        </div>
+                        <div class="col-span-4 sm:col-span-3">
+                            <input type="number" min="0" step="0.5" placeholder="Credits" value="${course.credits}" onchange="app.updateDynCourse('${id}', 'credits', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-2 outline-none input-theme">
+                        </div>
+                        <div class="col-span-6 sm:col-span-3">
+                            <select onchange="app.updateDynCourse('${id}', 'grade', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-2 outline-none appearance-none input-theme">
+                                <option value="">Select Grade</option>
+                                ${Object.keys(TIET_DATA.gradePoints).map(g => `<option value="${g}" ${course.grade === g ? 'selected' : ''}>${g}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1 flex justify-end">
+                            <button onclick="app.removeDynCourse('${id}')" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </div>
+                    `;
+                    listEl.appendChild(row);
+                });
+            },
+
+            addDynamicCourse() {
+                const yearData = this.state.data[`year${this.state.currentYear}`];
+                yearData.push({ id: generateId(), name: '', credits: '', grade: '' });
+                this.renderDynamicYear();
+                this.saveData();
+            },
+
+            updateDynCourse(id, field, value) {
+                const yearData = this.state.data[`year${this.state.currentYear}`];
+                const course = yearData.find(c => c.id === id);
+                if (course) {
+                    course[field] = field === 'credits' ? (parseFloat(value) || '') : value;
+                    this.calculateSGPA();
+                    this.saveData();
+                }
+            },
+
+            removeDynCourse(id) {
+                this.state.data[`year${this.state.currentYear}`] = this.state.data[`year${this.state.currentYear}`].filter(c => c.id !== id);
+                this.renderDynamicYear();
+                this.calculateSGPA();
+                this.saveData();
+            },
+
+            // --- Calculation & Core ---
+            calculateSGPA() {
                 let totalPoints = 0;
                 let totalCredits = 0;
-                
-                subjects.forEach(sub => {
-                    const grade = this.state.data[pool][sub.code].grade;
-                    if (grade && TIET_DATA.gradePoints[grade] !== undefined) {
-                        totalPoints += TIET_DATA.gradePoints[grade] * sub.credits;
-                        totalCredits += sub.credits;
-                    }
-                });
+
+                if (this.state.currentYear === 1 && this.state.currentPool) {
+                    const pool = this.state.currentPool;
+                    TIET_DATA[`pool${pool}`].forEach(sub => {
+                        const grade = this.state.data.year1[pool][sub.code].grade;
+                        if (grade && TIET_DATA.gradePoints[grade] !== undefined) {
+                            totalPoints += TIET_DATA.gradePoints[grade] * sub.credits;
+                            totalCredits += sub.credits;
+                        }
+                    });
+                } else if (this.state.currentYear > 1) {
+                    const yearData = this.state.data[`year${this.state.currentYear}`];
+                    yearData.forEach(c => {
+                        const credits = parseFloat(c.credits);
+                        if (c.grade && TIET_DATA.gradePoints[c.grade] !== undefined && !isNaN(credits)) {
+                            totalPoints += TIET_DATA.gradePoints[c.grade] * credits;
+                            totalCredits += credits;
+                        }
+                    });
+                }
 
                 const sgpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '0.00';
                 
@@ -650,31 +675,24 @@
             },
 
             resetData() {
-                const pool = this.state.currentPool;
-                if(!pool) return;
-
-                TIET_DATA[`pool${pool}`].forEach(sub => {
-                    this.state.data[pool][sub.code] = {
-                        marks: { preMst: '', mst: '', preEst: '', est: '' },
-                        hasSessionals: true,
-                        total: 0,
-                        grade: ''
-                    };
-                });
+                if (this.state.currentYear === 1 && this.state.currentPool) {
+                    const pool = this.state.currentPool;
+                    TIET_DATA[`pool${pool}`].forEach(sub => {
+                        this.state.data.year1[pool][sub.code] = { marks: { preMst: '', mst: '', preEst: '', est: '' }, hasSessionals: true, total: 0, grade: '' };
+                    });
+                    this.renderYear1Table();
+                } else if (this.state.currentYear > 1) {
+                    this.state.data[`year${this.state.currentYear}`] = [];
+                    this.renderDynamicYear();
+                }
                 
-                this.renderTable();
                 this.calculateSGPA();
                 this.saveData();
             }
         };
 
-        // Expose app to window for inline event handlers since we are using a module script now
         window.app = app;
-
-        // Initialize application on load
-        window.onload = () => {
-            app.init();
-        };
+        window.onload = () => app.init();
     </script>
 </body>
 </html>
