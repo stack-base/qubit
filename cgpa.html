@@ -191,7 +191,7 @@
             </div>
         </div>
 
-        <!-- CALCULATOR TABLE VIEW -->
+        <!-- CALCULATOR VIEW -->
         <div id="view-calculator" class="view-transition view-hidden">
             <div class="flex flex-col mb-6 gap-2">
                 <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
@@ -201,26 +201,10 @@
                 <p class="text-sm text-slate-500" id="calc-instructions">Input your marks below. Sessionals and bounds are enforced automatically.</p>
             </div>
             
-            <!-- Year 1 Container -->
-            <div id="year1-container" class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 overflow-hidden hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse whitespace-nowrap min-w-[850px]">
-                        <thead>
-                            <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                <th class="p-4 w-1/4">Course Name & Code</th>
-                                <th class="p-4 text-center w-20">Pre-MST<br><span class="text-[9px] font-normal lowercase">(Max 15)</span></th>
-                                <th class="p-4 text-center w-20">MST<br><span class="text-[9px] font-normal lowercase">(Max 30)</span></th>
-                                <th class="p-4 text-center w-20">Pre-EST<br><span class="text-[9px] font-normal lowercase">(Max 15)</span></th>
-                                <th class="p-4 text-center w-20">EST<br><span class="text-[9px] font-normal lowercase">(Max 40)</span></th>
-                                <th class="p-4 text-center w-20 text-thapar dark:text-thapar-light">Total</th>
-                                <th class="p-4 w-28 text-center">Grade</th>
-                                <th class="p-4 text-center w-24">Action<br><span class="text-[9px] font-normal lowercase">(Sessionals)</span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="year1-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/50">
-                            <!-- Rows Injected by JS -->
-                        </tbody>
-                    </table>
+            <!-- Year 1 Container (Grid Layout) -->
+            <div id="year1-container" class="hidden">
+                <div id="year1-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Course Cards Injected by JS -->
                 </div>
             </div>
 
@@ -279,9 +263,25 @@
         const db = getFirestore(firebaseApp);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tiet-cgpa-calculator';
 
+        // Eval Schemes definition
+        const SCHEMA_STD = [
+            { id: 'preMst', label: 'Pre-MST', max: 15 },
+            { id: 'mst', label: 'MST', max: 30 },
+            { id: 'preEst', label: 'Pre-EST', max: 15 },
+            { id: 'est', label: 'EST', max: 40 }
+        ];
+
+        // Specifically for Electrical (UES013) & Chemistry (UCB009)
+        const SCHEMA_SPEC = [
+            { id: 'labEval1', label: 'Lab (B.MST)', max: 10 },
+            { id: 'mst', label: 'MST', max: 30 },
+            { id: 'labEval2', label: 'Pre-EST Lab', max: 10 },
+            { id: 'quiz', label: 'Quiz', max: 10 },
+            { id: 'est', label: 'EST', max: 40 }
+        ];
+
         const TIET_DATA = {
             gradePoints: { 'A+': 10, 'A': 10, 'A-': 9, 'B': 8, 'B-': 7, 'C': 6, 'C-': 5, 'E': 2, 'F': 0 },
-            maxMarks: { preMst: 15, mst: 30, preEst: 15, est: 40 },
             standardCutoffs: [
                 {grade: 'A', min: 90}, {grade: 'A-', min: 80}, {grade: 'B', min: 70}, 
                 {grade: 'B-', min: 60}, {grade: 'C', min: 50}, {grade: 'C-', min: 40}
@@ -319,20 +319,28 @@
                 }
             },
 
+            getCourseSchema(code) {
+                return (code === 'UES013' || code === 'UCB009') ? SCHEMA_SPEC : SCHEMA_STD;
+            },
+
             init() {
                 this.initTheme();
 
-                // 1. Initial State Population (Year 1 structure)
+                // 1. Initial State Population (Year 1 structure dynamically based on schema)
                 ['A', 'B'].forEach(pool => {
                     TIET_DATA[`pool${pool}`].forEach(sub => {
+                        const schema = this.getCourseSchema(sub.code);
+                        const initialMarks = {};
+                        schema.forEach(field => initialMarks[field.id] = '');
+                        
                         this.state.data.year1[pool][sub.code] = {
-                            marks: { preMst: '', mst: '', preEst: '', est: '' },
+                            marks: initialMarks,
                             hasSessionals: true, total: 0, grade: ''
                         };
                     });
                 });
 
-                // 2. Authentication Flow Fix (Strictly wait for onAuthStateChanged)
+                // 2. Authentication Flow Fix
                 const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                 
                 if (token) {
@@ -343,9 +351,8 @@
                             this.handleAuthFailure();
                         });
                 } else {
-                    // This block halts the UI until Firebase determines the exact session state
                     const unsubscribe = onAuthStateChanged(auth, (user) => {
-                        unsubscribe(); // Resolve initial state once
+                        unsubscribe(); 
                         if (user) {
                             this.handleAuthSuccess();
                         } else {
@@ -356,7 +363,6 @@
             },
 
             async handleAuthSuccess() {
-                // 3. Load Data & Remove Loader
                 await this.loadData();
                 const loader = document.getElementById('full-screen-loader');
                 loader.classList.add('opacity-0');
@@ -364,7 +370,6 @@
             },
 
             handleAuthFailure() {
-                // Strictly redirect if user is null (Redirect Loop fix)
                 window.location.href = 'https://stack-base.github.io/account/login?redirectUrl=https://stack-base.github.io/qubit/cgpa';
             },
 
@@ -376,20 +381,27 @@
                     if (docSnap.exists()) {
                         const savedData = docSnap.data();
                         
-                        // Merge Year 1 Data
+                        // Merge Year 1 Data carefully to respect new schema fields if they changed
                         if (savedData.year1) {
                             ['A', 'B'].forEach(pool => {
                                 if (savedData.year1[pool]) {
                                     Object.keys(savedData.year1[pool]).forEach(code => {
                                         if (this.state.data.year1[pool][code]) {
-                                            this.state.data.year1[pool][code] = savedData.year1[pool][code];
+                                            const incoming = savedData.year1[pool][code];
+                                            const schema = this.getCourseSchema(code);
+                                            // Make sure we have the required keys initialized for the specific schema
+                                            schema.forEach(field => {
+                                                if(incoming.marks && incoming.marks[field.id] === undefined) {
+                                                    incoming.marks[field.id] = '';
+                                                }
+                                            });
+                                            this.state.data.year1[pool][code] = incoming;
                                         }
                                     });
                                 }
                             });
                         }
                         
-                        // Merge Dynamic Years Data
                         ['year2', 'year3', 'year4'].forEach(year => {
                             if (savedData[year]) this.state.data[year] = savedData[year];
                         });
@@ -475,45 +487,97 @@
                 document.getElementById('calc-instructions').textContent = "Input your marks below. Sessionals and bounds are enforced automatically.";
                 document.getElementById('year1-container').classList.remove('hidden');
                 document.getElementById('dynamic-year-container').classList.add('hidden');
-                this.renderYear1Table();
+                this.renderYear1Grid();
                 this.navigate('calculator');
             },
 
-            // --- Year 1 Logic ---
-            renderYear1Table() {
+            // --- Year 1 Logic (Grid Based) ---
+            renderYear1Grid() {
                 const pool = this.state.currentPool;
                 const subjects = TIET_DATA[`pool${pool}`];
-                const tbody = document.getElementById('year1-table-body');
-                tbody.innerHTML = '';
+                const gridContainer = document.getElementById('year1-grid');
+                gridContainer.innerHTML = '';
 
                 const gradeOptions = Object.keys(TIET_DATA.gradePoints).map(g => `<option value="${g}">${g}</option>`).join('');
 
                 subjects.forEach(sub => {
                     const data = this.state.data.year1[pool][sub.code];
+                    const schema = this.getCourseSchema(sub.code);
                     const sDisabled = !data.hasSessionals;
-                    const iClass = "w-full max-w-[65px] mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm text-center rounded focus:ring-1 focus:ring-thapar focus:border-thapar block p-1.5 outline-none transition-all input-theme disabled:opacity-30 disabled:bg-slate-100 disabled:cursor-not-allowed";
+                    const iClass = "w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm text-center rounded focus:ring-1 focus:ring-thapar focus:border-thapar block p-2 outline-none transition-all input-theme disabled:opacity-40 disabled:bg-slate-100 disabled:cursor-not-allowed";
 
+                    const card = document.createElement('div');
+                    card.className = "bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 p-5 flex flex-col hover:border-thapar/30 dark:hover:border-thapar/30 transition-colors";
+
+                    // Card Header
+                    let headerHTML = `
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span>
+                                </div>
+                                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-tight">${sub.name}</h3>
+                            </div>
+                            ${!sub.isBootcamp ? `<button onclick="app.toggleSessionals('${sub.code}')" class="shrink-0 ml-2 text-[10px] font-semibold px-2 py-1 rounded transition-colors ${sDisabled ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'}">${sDisabled ? 'Enable Sess.' : 'Disable Sess.'}</button>` : ''}
+                        </div>
+                    `;
+
+                    // Card Body & Footer
                     if (sub.isBootcamp) {
-                        tbody.innerHTML += `
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group">
-                            <td class="p-4"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span></div><div class="text-sm font-semibold text-slate-900 dark:text-slate-100">${sub.name}</div></td>
-                            <td class="p-4 text-center" colspan="5"><span class="text-xs text-slate-400 italic">Direct Grade Entry</span></td>
-                            <td class="p-4 text-center"><select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-1.5 outline-none appearance-none input-theme"><option value="">Select</option>${gradeOptions}</select></td>
-                            <td class="p-4 text-center"></td>
-                        </tr>`;
+                        card.innerHTML = headerHTML + `
+                            <div class="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
+                                <span class="text-xs text-slate-400 italic">Direct Grade Entry</span>
+                                <div class="w-28">
+                                    <select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-2 outline-none appearance-none input-theme">
+                                        <option value="">Select</option>${gradeOptions}
+                                    </select>
+                                </div>
+                            </div>
+                        `;
                     } else {
-                        tbody.innerHTML += `
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group">
-                            <td class="p-4"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">${sub.code}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-thapar/10 text-thapar border border-thapar/20 rounded">${sub.credits} CR</span></div><div class="text-sm font-semibold text-slate-900 dark:text-slate-100 whitespace-normal line-clamp-2">${sub.name}</div></td>
-                            <td class="p-4 text-center"><input type="number" min="0" max="15" step="0.5" id="mark-${sub.code}-preMst" value="${data.marks.preMst}" oninput="app.handleMarkInput('${sub.code}', 'preMst', this.value)" ${sDisabled ? 'disabled' : ''} class="${iClass}"></td>
-                            <td class="p-4 text-center"><input type="number" min="0" max="30" step="0.5" id="mark-${sub.code}-mst" value="${data.marks.mst}" oninput="app.handleMarkInput('${sub.code}', 'mst', this.value)" class="${iClass}"></td>
-                            <td class="p-4 text-center"><input type="number" min="0" max="15" step="0.5" id="mark-${sub.code}-preEst" value="${data.marks.preEst}" oninput="app.handleMarkInput('${sub.code}', 'preEst', this.value)" ${sDisabled ? 'disabled' : ''} class="${iClass}"></td>
-                            <td class="p-4 text-center"><input type="number" min="0" max="40" step="0.5" id="mark-${sub.code}-est" value="${data.marks.est}" oninput="app.handleMarkInput('${sub.code}', 'est', this.value)" class="${iClass}"></td>
-                            <td class="p-4 text-center"><div id="total-${sub.code}" class="text-sm font-bold text-thapar dark:text-thapar-light">${data.total || '0'}</div></td>
-                            <td class="p-4 text-center"><select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-1.5 outline-none appearance-none input-theme"><option value="">Select</option>${gradeOptions}</select></td>
-                            <td class="p-4 text-center"><button onclick="app.toggleSessionals('${sub.code}')" class="text-[10px] font-semibold px-2 py-1 rounded transition-colors ${sDisabled ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'}">${sDisabled ? 'Enable Sess.' : 'Disable Sess.'}</button></td>
-                        </tr>`;
+                        // Generate Grid of Inputs based on schema
+                        let inputsHTML = `<div class="grid grid-cols-${schema.length} gap-2 mb-4">`;
+                        schema.forEach(field => {
+                            // Check if this field belongs to sessionals (everything except MST/EST)
+                            const isSessionalField = (field.id !== 'mst' && field.id !== 'est');
+                            const isDisabled = sDisabled && isSessionalField;
+                            
+                            inputsHTML += `
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-[10px] font-medium text-slate-500 text-center leading-tight">
+                                        ${field.label}<br><span class="text-[9px] font-normal lowercase">(Max ${field.max})</span>
+                                    </label>
+                                    <input type="number" min="0" max="${field.max}" step="0.5" 
+                                           id="mark-${sub.code}-${field.id}" 
+                                           value="${data.marks[field.id] !== undefined ? data.marks[field.id] : ''}" 
+                                           oninput="app.handleMarkInput('${sub.code}', '${field.id}', this.value)" 
+                                           ${isDisabled ? 'disabled' : ''} class="${iClass}">
+                                </div>
+                            `;
+                        });
+                        inputsHTML += `</div>`;
+
+                        let footerHTML = `
+                            <div class="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
+                                <div class="flex items-baseline gap-1.5">
+                                    <span class="text-xs font-medium text-slate-500">Total:</span>
+                                    <span id="total-${sub.code}" class="text-lg font-bold text-thapar dark:text-thapar-light">${data.total || '0'}</span>
+                                </div>
+                                <div class="w-28">
+                                    <select id="grade-sel-${sub.code}" onchange="app.handleManualGrade('${sub.code}', this.value)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded focus:ring-1 focus:ring-thapar block p-2 outline-none appearance-none input-theme">
+                                        <option value="">Grade</option>${gradeOptions}
+                                    </select>
+                                </div>
+                            </div>
+                        `;
+                        
+                        card.innerHTML = headerHTML + inputsHTML + footerHTML;
                     }
+                    
+                    gridContainer.appendChild(card);
+
+                    // Set Grade value after appending to DOM
                     setTimeout(() => {
                         const sel = document.getElementById(`grade-sel-${sub.code}`);
                         if(sel && data.grade) sel.value = data.grade;
@@ -525,21 +589,32 @@
                 const pool = this.state.currentPool;
                 const data = this.state.data.year1[pool][code];
                 data.hasSessionals = !data.hasSessionals;
+                
                 if (!data.hasSessionals) {
-                    data.marks.preMst = ''; data.marks.preEst = '';
+                    // Clear all fields except mst and est
+                    const schema = this.getCourseSchema(code);
+                    schema.forEach(field => {
+                        if (field.id !== 'mst' && field.id !== 'est') {
+                            data.marks[field.id] = '';
+                        }
+                    });
                 }
-                this.renderYear1Table();
-                this.handleMarkInput(code, null, null); // recalculate
+                
+                this.renderYear1Grid();
+                this.handleMarkInput(code, null, null); // recalculate total
                 this.saveData();
             },
 
             handleMarkInput(code, field, value) {
                 const pool = this.state.currentPool;
                 const data = this.state.data.year1[pool][code];
+                const schema = this.getCourseSchema(code);
                 
                 if (field !== null) {
                     let numericVal = parseFloat(value);
-                    const maxAllowed = TIET_DATA.maxMarks[field];
+                    const fieldSchema = schema.find(s => s.id === field);
+                    const maxAllowed = fieldSchema ? fieldSchema.max : 0;
+                    
                     if (!isNaN(numericVal)) {
                         if (numericVal < 0) numericVal = 0;
                         if (numericVal > maxAllowed) numericVal = maxAllowed;
@@ -552,9 +627,10 @@
                     }
                 }
 
+                // Sum up all keys dynamically based on schema
                 let total = 0;
-                ['preMst', 'mst', 'preEst', 'est'].forEach(f => {
-                    const v = parseFloat(data.marks[f]);
+                schema.forEach(s => {
+                    const v = parseFloat(data.marks[s.id]);
                     if (!isNaN(v)) total += v;
                 });
                 data.total = parseFloat(total.toFixed(2));
@@ -685,9 +761,12 @@
                 if (this.state.currentYear === 1 && this.state.currentPool) {
                     const pool = this.state.currentPool;
                     TIET_DATA[`pool${pool}`].forEach(sub => {
-                        this.state.data.year1[pool][sub.code] = { marks: { preMst: '', mst: '', preEst: '', est: '' }, hasSessionals: true, total: 0, grade: '' };
+                        const schema = this.getCourseSchema(sub.code);
+                        const resetMarks = {};
+                        schema.forEach(field => resetMarks[field.id] = '');
+                        this.state.data.year1[pool][sub.code] = { marks: resetMarks, hasSessionals: true, total: 0, grade: '' };
                     });
-                    this.renderYear1Table();
+                    this.renderYear1Grid();
                 } else if (this.state.currentYear > 1) {
                     this.state.data[`year${this.state.currentYear}`] = [];
                     this.renderDynamicYear();
