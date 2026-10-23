@@ -292,6 +292,14 @@
             { id: 'est', label: 'EST', max: 40 }
         ];
 
+        // Specifically for Energy (UEN008)
+        const SCHEMA_ENERGY = [
+            { id: 'quiz', label: 'Quiz (Pre.MST)', max: 15 },
+            { id: 'mst', label: 'Project', max: 30 },
+            { id: 'quiz', label: 'Quiz (Pre.EST)', max: 15 },
+            { id: 'est', label: 'EST', max: 40 }
+        ];
+
         const TIET_DATA = {
             gradePoints: { 'A+': 10, 'A': 10, 'A-': 9, 'B': 8, 'B-': 7, 'C': 6, 'C-': 5, 'E': 2, 'F': 0 },
             standardCutoffs: [
@@ -334,6 +342,7 @@
             getCourseSchema(code) {
                 if (code === 'UES013') return SCHEMA_ELEC;
                 if (code === 'UCB009') return SCHEMA_CHEM;
+                if (code === 'UEN008') return SCHEMA_ENERGY;
                 return SCHEMA_STD;
             },
 
