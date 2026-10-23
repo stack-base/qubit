@@ -276,18 +276,19 @@
 
         // Specifically for Electrical (UES013)
         const SCHEMA_ELEC = [
-            { id: 'labEval1', label: 'Lab (B.MST)', max: 10 },
+            { id: 'labEval1', label: 'Lab (Pre.MST)', max: 10 },
             { id: 'mst', label: 'MST', max: 30 },
-            { id: 'labEval2', label: 'Pre-EST Lab', max: 10 },
+            { id: 'labEval2', label: 'Lab (Pre-EST)', max: 10 },
             { id: 'quiz', label: 'Quiz', max: 10 },
             { id: 'est', label: 'EST', max: 40 }
         ];
 
         // Specifically for Chemistry (UCB009)
         const SCHEMA_CHEM = [
+            { id: 'quiz', label: 'Quiz (Pre.MST)', max: 10 },
             { id: 'mst', label: 'MST', max: 30 },
-            { id: 'preEstLab', label: 'Pre-EST Lab', max: 15 },
-            { id: 'quiz', label: 'Quiz', max: 15 },
+            { id: 'quiz', label: 'Quiz (Pre.EST)', max: 10 },
+            { id: 'preEstLab', label: 'Lab (Pre.EST)', max: 10 },
             { id: 'est', label: 'EST', max: 40 }
         ];
 
