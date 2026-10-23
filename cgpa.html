@@ -264,8 +264,14 @@
         import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "dummy", authDomain: "dummy.firebaseapp.com", projectId: "dummy", storageBucket: "dummy.appspot.com"
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkKhb8m0znWyC2amv6uGpA8KmbkuW-j1U",
+            authDomain: "timetrekker-app.firebaseapp.com",
+            projectId: "timetrekker-app",
+            storageBucket: "timetrekker-app.firebasestorage.app",
+            messagingSenderId: "83185163190",
+            appId: "1:83185163190:web:e2974c5d0f0274fe5e3f17",
+            measurementId: "G-FLZ02E1Y5L"
         };
 
         const firebaseApp = initializeApp(firebaseConfig);
